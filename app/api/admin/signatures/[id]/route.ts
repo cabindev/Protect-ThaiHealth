@@ -18,7 +18,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   if (!sig) return NextResponse.json({ error: t.api.userNotFound }, { status: 404 });
 
   await prisma.signature.delete({ where: { id } });
-  await fs.rm(path.join(UPLOAD_ROOT, sig.signaturePath)).catch(() => {});
+  if (sig.signaturePath) await fs.rm(path.join(UPLOAD_ROOT, sig.signaturePath)).catch(() => {});
   // audit: เก็บชื่อ/องค์กรไว้อ้างอิง ไม่เก็บอีเมล
   await writeAuditLog({
     action: 'DELETE',

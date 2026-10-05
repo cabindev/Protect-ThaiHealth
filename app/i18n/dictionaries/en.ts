@@ -259,7 +259,6 @@ const en: Dictionary = {
     showPublic: 'Show my first name, organization, position, country and comment in the list of supporters (never my surname, email or signature)',
     consent: 'By pressing "Sign" you support the statement above and consent to your name, email, organization, position, country, comment and signature being stored and used only to submit this statement. Email and signature are never made public.',
     submit: 'Sign',
-    errSignature: 'Please sign inside the box',
     errRequired: 'Please fill in every field',
     errNetwork: 'Could not send. Check your connection and try again.',
     thanksTitle: (name: string) => `Thank you, ${name}`,

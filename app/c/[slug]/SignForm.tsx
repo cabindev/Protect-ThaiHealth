@@ -42,12 +42,11 @@ export default function SignForm({ slug, countries }: { slug: string; countries:
     const required = [form.firstName, form.lastName, form.email, form.country, ...(asOrg ? [form.organization, form.position] : [])];
     if (required.some((v) => !v.trim())) return setError(c.errRequired);
     if (tooLong) return setError(c.errCommentLong(MAX_COMMENT_WORDS));
-    if (!pad.current || pad.current.isEmpty()) return setError(c.errSignature);
 
     setLoading(true);
     try {
-      const blob = await pad.current.toBlob();
-      if (!blob) throw new Error(c.errSignature);
+      // ลายเซ็นไม่บังคับ: เซ็นแล้วค่อยแนบไป
+      const blob = pad.current && !pad.current.isEmpty() ? await pad.current.toBlob() : null;
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => fd.set(k, v.trim()));
       fd.set('signingAs', signingAs);
@@ -55,7 +54,7 @@ export default function SignForm({ slug, countries }: { slug: string; countries:
       fd.set('showPublic', showPublic ? '1' : '0');
       fd.set('consent', '1'); // การกดปุ่ม "ลงชื่อ" ใต้ข้อความยินยอม = ยินยอม
       fd.set('website', String(new FormData(formEl).get('website') ?? ''));
-      fd.set('signature', new File([blob], 'signature.png', { type: 'image/png' }));
+      if (blob) fd.set('signature', new File([blob], 'signature.png', { type: 'image/png' }));
       const res = await fetch(`/api/campaigns/${slug}/sign`, { method: 'POST', body: fd });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || c.errNetwork);
@@ -232,7 +231,7 @@ export default function SignForm({ slug, countries }: { slug: string; countries:
         <div className="flex items-baseline justify-between mb-2">
           <span className="text-[13px] font-semibold text-gray-500">
             {c.signature}
-            <span className="text-orange-600 ml-1">*</span>
+            <span className="text-gray-400 font-normal ml-1">{c.commentOptional}</span>
           </span>
           <button
             type="button"

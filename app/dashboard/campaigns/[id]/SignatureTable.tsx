@@ -105,8 +105,12 @@ export default function SignatureTable({ rows }: { rows: SignatureRow[] }) {
                 </td>
                 <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{r.countryLabel}</td>
                 <td className="px-4 py-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- ไฟล์ผ่าน /api/files (ต้อง login) next/image ใช้ไม่ได้ */}
-                  <img src={`/api/files/${r.signaturePath}`} alt="" className="h-12 w-auto max-w-[160px] object-contain rounded border border-gray-100 bg-white" loading="lazy" />
+                  {r.signaturePath ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- ไฟล์ผ่าน /api/files (ต้อง login) next/image ใช้ไม่ได้
+                    <img src={`/api/files/${r.signaturePath}`} alt="" className="h-12 w-auto max-w-[160px] object-contain rounded border border-gray-100 bg-white" loading="lazy" />
+                  ) : (
+                    <span className="text-gray-300">—</span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{fmt(r.createdAt)}</td>
                 <td className="px-4 py-3 text-right whitespace-nowrap">

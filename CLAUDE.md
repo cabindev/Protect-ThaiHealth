@@ -53,7 +53,7 @@ node scripts/make-superadmin.mjs <email>        # ตั้ง superadmin คน
   · `/c/[slug]/supporters` ผู้สนับสนุนทั้งหมดแบ่งหน้าละ 50 · `/c/[slug]/present` จอ QR + ตัวนับสด (ห้องประชุม)
   · select ข้อมูลผู้ลงชื่อบนหน้าสาธารณะต้องใช้ `PUBLIC_SUPPORTER_SELECT` (ย่อ) / `PUBLIC_SUPPORTER_SELECT_DETAILED` (หน้า /supporters) + `publicSupporterWhere`
     จาก `app/c/[slug]/SupporterList.tsx` เท่านั้น — **ห้ามมีนามสกุล/อีเมล/signaturePath** · จอ present ล็อกภาษาอังกฤษ (`?lang=th` = ไทย)
-- ฟิลด์: ชื่อ / นามสกุล / อีเมล / ชื่อองค์กร / ประเทศ (ISO 2 ตัว, `app/lib/countries.ts`) / ลายเซ็นนิ้ว (`app/components/SignaturePad.tsx` → PNG)
+- ฟิลด์: ชื่อ / นามสกุล / อีเมล / ชื่อองค์กร / ประเทศ (ISO 2 ตัว, `app/lib/countries.ts`) / ลายเซ็นนิ้ว **ไม่บังคับ** (`app/components/SignaturePad.tsx` → PNG · ไม่เซ็น = `signaturePath` เป็นสตริงว่าง)
   + ความคิดเห็น (ไม่บังคับ ≤ 2,500 คำ นับด้วย `app/lib/wordCount.ts` — Intl.Segmenter ตัดคำไทยได้ ใช้ตัวเดียวกันทั้งฟอร์มและ API · เห็นเฉพาะแอดมิน/CSV/หน้าพิมพ์ `?comments=1`)
   + แสดงบนหน้าสาธารณะ (ติ๊กไว้ให้ — ชื่อ ไม่มีนามสกุล + ตำแหน่ง + ประเทศ + ความคิดเห็น) · ยินยอม = กดปุ่ม "ลงชื่อ" ใต้ข้อความยินยอม
     (**ห้ามทำช่องยินยอมแบบติ๊กไว้ล่วงหน้า** — ไม่ถือเป็นความยินยอมตาม PDPA) · ลงนามในนาม ค่าเริ่มต้น = ส่วนตัว · อีเมลซ้ำในแคมเปญเดียวกัน = ปฏิเสธ (unique index)

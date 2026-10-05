@@ -81,8 +81,12 @@ export default async function PrintPage({ params }: { params: Promise<{ id: stri
               <td className="py-1.5 pr-2">{countryName(r.country, t.dateLocale)}</td>
               <td className="py-1.5 pr-2 whitespace-nowrap">{fmt(r.createdAt)}</td>
               <td className="py-1">
-                {/* eslint-disable-next-line @next/next/no-img-element -- ไฟล์ผ่าน /api/files (ต้อง login) */}
-                <img src={`/api/files/${r.signaturePath}`} alt="" className="h-12 w-auto max-w-[170px] object-contain" />
+                {r.signaturePath ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- ไฟล์ผ่าน /api/files (ต้อง login)
+                  <img src={`/api/files/${r.signaturePath}`} alt="" className="h-12 w-auto max-w-[170px] object-contain" />
+                ) : (
+                  '—'
+                )}
               </td>
             </tr>,
             r.comment ? (

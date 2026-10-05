@@ -1,5 +1,5 @@
 // app/api/campaigns/[slug]/sign/route.ts — ลงชื่อสนับสนุนแคมเปญ (สาธารณะ ไม่ต้อง login)
-// multipart: signingAs (ORGANIZATION|INDIVIDUAL), position, firstName, lastName, email, organization, country, comment (ไม่บังคับ ≤ 2,500 คำ), showPublic, consent, website (honeypot), signature (PNG)
+// multipart: signingAs (ORGANIZATION|INDIVIDUAL), position, firstName, lastName, email, organization, country, comment (ไม่บังคับ ≤ 2,500 คำ), showPublic, consent, website (honeypot), signature (PNG, ไม่บังคับ)
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import path from 'path';
@@ -74,12 +74,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     (asOrg && (!organization || !position)) ||
     !firstName || !lastName || !consent ||
     !EMAIL_RE.test(email) || !isCountryCode(country) ||
-    !(signature instanceof File) || signature.size === 0 || signature.size > SIGNATURE_MAX_BYTES
+    // ลายเซ็นไม่บังคับ — ถ้าแนบมาต้องเป็นไฟล์ PNG ขนาดไม่เกินกำหนด
+    (signature instanceof File && signature.size > SIGNATURE_MAX_BYTES)
   ) {
     return NextResponse.json({ error: t.api.signInvalid }, { status: 400 });
   }
-  const buf = Buffer.from(await signature.arrayBuffer());
-  if (!isPng(buf)) return NextResponse.json({ error: t.api.signInvalid }, { status: 400 });
+  const hasSignature = signature instanceof File && signature.size > 0;
+  const buf = hasSignature ? Buffer.from(await signature.arrayBuffer()) : null;
+  if (buf && !isPng(buf)) return NextResponse.json({ error: t.api.signInvalid }, { status: 400 });
 
   // เช็คซ้ำก่อนเขียนไฟล์ (unique index ใน DB กันซ้ำอีกชั้นตอนส่งพร้อมกัน)
   const dup = await prisma.signature.findUnique({
@@ -88,11 +90,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   });
   if (dup) return NextResponse.json({ error: t.api.signDuplicate }, { status: 409 });
 
-  const relPath = `signatures/${campaign.id}/${Date.now()}-${crypto.randomBytes(6).toString('hex')}.png`;
+  // ไม่ได้เซ็น = เก็บ path ว่าง (คอลัมน์ NOT NULL)
+  const relPath = buf ? `signatures/${campaign.id}/${Date.now()}-${crypto.randomBytes(6).toString('hex')}.png` : '';
   const absPath = path.join(UPLOAD_ROOT, relPath);
   try {
-    await fs.mkdir(path.dirname(absPath), { recursive: true });
-    await fs.writeFile(absPath, buf);
+    if (buf) {
+      await fs.mkdir(path.dirname(absPath), { recursive: true });
+      await fs.writeFile(absPath, buf);
+    }
     await prisma.signature.create({
       data: {
         campaignId: campaign.id,
