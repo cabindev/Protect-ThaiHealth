@@ -12,7 +12,6 @@ import { cn } from '@/lib/utils';
 import SignForm from './SignForm';
 import StatementBody from './StatementBody';
 import ReadingProgress from '@/app/components/ReadingProgress';
-import StickySignButton from './StickySignButton';
 import SupporterList, { PUBLIC_SUPPORTER_SELECT, publicSupporterWhere } from './SupporterList';
 
 export const dynamic = 'force-dynamic';
@@ -164,7 +163,6 @@ export default async function CampaignPage({ params }: { params: Promise<{ slug:
           )}
         </section>
 
-        {accepting && <StickySignButton />}
 
         {/* ช่องทางทางการ (คนไทยไปกรอกเองด้วยเลขบัตรของตัวเอง) */}
         {campaign.officialUrl && (
@@ -223,7 +221,7 @@ async function Counter({ count, orgs, countries, centered }: { count: number; or
   );
 }
 
-// ปุ่ม "ร่วมลงชื่อ" ไปที่ฟอร์ม — id ใช้กับ StickySignButton (ปุ่มลอยซ่อนเมื่อเห็นปุ่มนี้)
+// ปุ่ม "ร่วมลงชื่อ" ไปที่ฟอร์ม
 function SignCta({ label, className, arrow }: { label: string; className?: string; arrow?: boolean }) {
   return (
     <a
