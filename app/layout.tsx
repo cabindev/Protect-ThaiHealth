@@ -14,13 +14,14 @@ import { getServerSession } from "next-auth/next";
 import authOptions from "./lib/configs/auth/authOptions";
 import Navbar from "@/components/Navbar";
 import { SITE } from "./lib/site";
+import { siteUrl } from "./lib/siteUrl";
 import { getDict, getLocale } from "./i18n/server";
 import { I18nProvider } from "./i18n/I18nProvider";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getDict();
   return {
-    metadataBase: new URL(process.env.NEXTAUTH_URL || "http://localhost:3000"),
+    metadataBase: new URL(siteUrl()),
     title: SITE.name,
     description: t.site.tagline,
   };

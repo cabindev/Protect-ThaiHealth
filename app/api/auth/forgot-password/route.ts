@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { transporter, esc } from "@/app/lib/mailer";
 import prisma from "@/app/lib/db";
 import { SITE } from "@/app/lib/site";
+import { siteUrl } from "@/app/lib/siteUrl";
 import { getDict } from "@/app/i18n/server";
 
 export async function POST(req: NextRequest) {
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
     });
 
     // NEXTAUTH_URL มักลงท้ายด้วย "/" — ตัดออกก่อนต่อ path ไม่งั้นลิงก์ในอีเมลเป็น "//auth/..."
-    const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/+$/, "");
+    const baseUrl = siteUrl();
     const resetUrl = `${baseUrl}/auth/reset-password?token=${token}`;
     const e = t.email;
 

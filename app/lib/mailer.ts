@@ -2,6 +2,7 @@
 import nodemailer from 'nodemailer';
 import prisma from '@/app/lib/db';
 import { SITE } from '@/app/lib/site';
+import { siteUrl } from '@/app/lib/siteUrl';
 import { getDictionaryFor } from '@/app/i18n/dictionaries';
 
 export const transporter = nodemailer.createTransport({
@@ -29,7 +30,7 @@ export async function notifyAdminsOfSignup(user: { firstName: string; lastName: 
     });
     const to = admins.map((a) => a.email);
     if (to.length === 0) return;
-    const link = new URL('/dashboard/setting/admin', process.env.NEXTAUTH_URL || 'http://localhost:3000').toString();
+    const link = new URL('/dashboard/setting/admin', siteUrl()).toString();
     const name = `${user.firstName} ${user.lastName}`.trim();
     const e = getDictionaryFor('th').email;
     const google = user.via === 'google';

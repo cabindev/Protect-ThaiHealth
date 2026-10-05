@@ -7,6 +7,11 @@ import bcrypt from 'bcrypt';
 import prisma from '@/app/lib/db';
 import { notifyAdminsOfSignup } from '@/app/lib/mailer';
 import { SECURE_COOKIE, SESSION_COOKIE } from './cookie';
+import { siteUrl } from '@/app/lib/siteUrl';
+
+// NextAuth อ่าน NEXTAUTH_URL ตอนสร้าง callback ของ Google — ถ้าลืมตั้งบนเซิร์ฟเวอร์ กำหนดให้เองจากโดเมนจริง
+// (ไม่งั้น callback = http://localhost:3000/... แล้วล็อกอิน Google ไม่ได้)
+if (!process.env.NEXTAUTH_URL) process.env.NEXTAUTH_URL = siteUrl();
 
 interface Credentials {
   email: string;
