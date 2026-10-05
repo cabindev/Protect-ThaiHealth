@@ -71,7 +71,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ slug:
           ตัวอักษรกลางจอ สีเข้มบนส้ม (คอนทราสต์ผ่าน — ขาวบนส้มอ่านยากกว่า) · ปุ่มดำแบบภาพอ้างอิง */}
       {l.hero && (
         <section className="relative isolate overflow-hidden bg-orange-600 min-h-[100svh] flex items-center justify-center px-5 pt-20 pb-12 text-center">
-          {/* แผนที่ halftone + คลื่นจากกรุงเทพฯ (ในไฟล์ SVG) · กล่องนอกเลื่อนช้า ๆ (hero-drift) รูปในขยายตามจอ */}
+          {/* แผนที่ halftone แบบนิ่ง (ไม่มีคลื่นกรุงเทพฯ — แย่งความสนใจจากข้อความ ใช้เฉพาะจอ QR) · กล่องนอกเลื่อนช้า ๆ รูปในขยายตามจอ */}
           <div className="hero-drift pointer-events-none select-none absolute -inset-[3%] -z-10" aria-hidden="true">
             {/* eslint-disable-next-line @next/next/no-img-element -- SVG ตกแต่งไฟล์เดียว ไม่ต้องผ่าน next/image */}
             <img

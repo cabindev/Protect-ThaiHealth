@@ -39,7 +39,7 @@ export default async function PresentPage({
     <main className="relative isolate overflow-hidden min-h-screen bg-orange-600 px-6 py-10 flex items-center text-gray-950">
       <div className="hero-drift pointer-events-none select-none absolute -inset-[3%] -z-10" aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element -- SVG ตกแต่ง */}
-        <img src="/maps/thailand-halftone.svg" alt="" className="h-full w-full object-contain scale-[1.3] object-[30%_50%]" />
+        <img src="/maps/thailand-halftone-pulse.svg" alt="" className="h-full w-full object-contain scale-[1.3] object-[30%_50%]" />
       </div>
       <div className="w-full max-w-6xl mx-auto grid lg:grid-cols-[1.1fr_0.9fr] gap-12 items-center">
         <div>
