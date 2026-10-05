@@ -18,6 +18,7 @@ export default function Countdown({
   serverNow,
   locale,
   size = 'sm',
+  tone = 'default',
   className,
 }: {
   closesAt: string; // ISO
@@ -25,6 +26,7 @@ export default function Countdown({
   serverNow: number;
   locale: Locale;
   size?: 'sm' | 'lg';
+  tone?: 'default' | 'onBrand'; // onBrand = บนพื้นส้ม (ปก) — ใช้สีเข้มทั้งหมด ส้มบนส้มจะมองไม่เห็น
   className?: string;
 }) {
   const t = getDictionaryFor(locale).campaign;
@@ -55,6 +57,7 @@ export default function Countdown({
   if (left <= 0) return null;
 
   const urgent = left <= 2 * DAY;
+  const onBrand = tone === 'onBrand';
   const text =
     left > 2 * DAY
       ? t.daysLeft(Math.floor(left / DAY))
@@ -71,10 +74,12 @@ export default function Countdown({
       )}
       aria-live="polite"
     >
-      <Clock className={cn('shrink-0', size === 'lg' ? 'w-7 h-7' : 'w-4 h-4', urgent ? 'text-orange-600' : 'text-gray-400')} />
-      <span className={cn('font-semibold', urgent ? 'text-orange-700' : 'text-gray-800')}>{text}</span>
+      <Clock className={cn('shrink-0', size === 'lg' ? 'w-7 h-7' : 'w-4 h-4', onBrand ? 'text-gray-950' : urgent ? 'text-orange-600' : 'text-gray-400')} />
+      <span className={cn('font-semibold', onBrand ? cn('text-gray-950', urgent && 'underline decoration-2 underline-offset-4') : urgent ? 'text-orange-700' : 'text-gray-800')}>
+        {text}
+      </span>
       {/* จอใหญ่: วันปิดขึ้นบรรทัดของตัวเอง (ไม่ตัดกลางประโยค) */}
-      <span className={cn('text-gray-500', size === 'lg' && 'basis-full text-xl lg:text-2xl')}>
+      <span className={cn(onBrand ? 'text-gray-950/75' : 'text-gray-500', size === 'lg' && 'basis-full text-xl lg:text-2xl')}>
         {size === 'lg' ? t.closesOn(closesLabel) : `· ${t.closesOn(closesLabel)}`}
       </span>
     </p>

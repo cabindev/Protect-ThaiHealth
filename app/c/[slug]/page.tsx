@@ -8,6 +8,7 @@ import { formatDeadline, isAccepting, localizeCampaign } from '@/app/lib/campaig
 import Countdown from '@/app/components/Countdown';
 import { countryOptions } from '@/app/lib/countries';
 import { getDict, getLocale } from '@/app/i18n/server';
+import { cn } from '@/lib/utils';
 import SignForm from './SignForm';
 import StickySignButton from './StickySignButton';
 import SupporterList, { PUBLIC_SUPPORTER_SELECT, publicSupporterWhere } from './SupporterList';
@@ -62,37 +63,54 @@ export default async function CampaignPage({ params }: { params: Promise<{ slug:
   ]);
 
   return (
-    <main className="min-h-screen bg-white pt-20 pb-16 px-4">
-      {/* ปก — หน้าจอแรกเต็มจอ แล้วค่อยเลื่อนอ่าน/ลงชื่อด้านล่าง */}
+    <main className="min-h-screen bg-white">
+      {/* ปก — เต็มจอ พื้นส้มล้วน + แผนที่จุด halftone ไทย/เพื่อนบ้าน (public/maps/thailand-halftone.svg)
+          ตัวอักษรกลางจอ สีเข้มบนส้ม (คอนทราสต์ผ่าน — ขาวบนส้มอ่านยากกว่า) · ปุ่มดำแบบภาพอ้างอิง */}
       {l.hero && (
-        <section className="-mt-4 min-h-[calc(100svh-5rem)] flex flex-col items-center justify-center text-center max-w-4xl mx-auto py-8">
-          <h1 className="text-[2rem] leading-[1.15] sm:text-6xl font-extrabold tracking-tight text-gray-900 text-balance">
-            {l.hero.title}
-          </h1>
-          {l.hero.subtitle && (
-            <p className="mt-4 text-lg sm:text-3xl text-gray-800 text-balance">{l.hero.subtitle}</p>
-          )}
-          {l.hero.quote && (
-            <>
-              <span className="mt-8 sm:mt-10 block w-12 h-1 rounded-full bg-orange-600" aria-hidden="true" />
-              <p className="mt-6 sm:mt-8 text-xl sm:text-3xl font-semibold text-orange-700 leading-snug text-balance">
-                &ldquo;{l.hero.quote}&rdquo;
-              </p>
-            </>
-          )}
-          <div className="mt-10 sm:mt-12 w-full max-w-md">
-            <Counter count={count} orgs={orgs.length} countries={countries.length} centered />
-            {accepting && <SignCta label={t.campaign.signNow} className="mt-4 w-full h-12 text-base" />}
-            {countdown && <div className="mt-3">{countdown}</div>}
-            {!accepting && <p className="mt-4 text-sm font-medium text-gray-600">{t.campaign.closedSummary(count, orgs.length)}</p>}
-            <a href="#statement" className="mt-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
+        <section className="relative isolate overflow-hidden bg-orange-600 min-h-[100svh] flex items-center justify-center px-5 pt-20 pb-12 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element -- SVG ตกแต่งไฟล์เดียว ไม่ต้องผ่าน next/image */}
+          <img
+            src="/maps/thailand-halftone.svg"
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none select-none absolute inset-0 -z-10 h-full w-full object-cover object-[50%_42%] sm:object-contain"
+          />
+          <div className="max-w-2xl text-gray-950">
+            <p className="font-mono text-[13px] tracking-wide text-gray-950/80">Protect ThaiHealth · {new Date().getFullYear()}</p>
+            <h1 className="mt-4 text-[2rem] leading-[1.15] sm:text-[2.6rem] font-bold tracking-tight text-balance">{l.hero.title}</h1>
+            {l.hero.subtitle && <p className="mt-3 text-lg sm:text-xl text-gray-950/85 text-balance">{l.hero.subtitle}</p>}
+            {l.hero.quote && (
+              <p className="mt-5 text-base sm:text-lg font-semibold leading-snug text-balance">&ldquo;{l.hero.quote}&rdquo;</p>
+            )}
+            <p className="mt-6 text-sm sm:text-[15px] text-gray-950/80">
+              <span className="font-semibold text-gray-950">{t.campaign.signers(count)}</span>
+              {orgs.length > 0 && <> · {t.campaign.organizationsCount(orgs.length)}</>}
+              {countries.length > 0 && <> · {t.campaign.countries(countries.length)}</>}
+            </p>
+            {accepting ? (
+              <SignCta label={t.campaign.signNow} className="mt-5 h-11 rounded-lg bg-gray-950 hover:bg-black" />
+            ) : (
+              <p className="mt-5 text-sm font-medium">{t.campaign.closedSummary(count, orgs.length)}</p>
+            )}
+            {accepting && campaign.closesAt && (
+              <div className="mt-4">
+                <Countdown
+                  closesAt={campaign.closesAt.toISOString()}
+                  closesLabel={formatDeadline(campaign.closesAt, t.dateLocale)}
+                  serverNow={serverNow}
+                  locale={locale}
+                  tone="onBrand"
+                />
+              </div>
+            )}
+            <a href="#statement" className="mt-5 inline-flex items-center gap-1 text-sm text-gray-950/75 hover:text-gray-950">
               {t.campaign.readStatement} <ChevronDown className="w-4 h-4" />
             </a>
           </div>
         </section>
       )}
 
-      <div className="max-w-2xl mx-auto">
+      <div className={`max-w-2xl mx-auto px-4 sm:px-0 pb-16 ${l.hero ? 'pt-10' : 'pt-20'}`}>
         {l.hero ? (
           <h2 id="statement" className="scroll-mt-20 pt-6 text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 leading-snug">
             {l.title}
@@ -191,7 +209,7 @@ function SignCta({ label, className }: { label: string; className?: string }) {
     <a
       id="sign-cta"
       href="#sign"
-      className={`inline-flex items-center justify-center gap-2 px-5 rounded-full bg-orange-600 text-white text-[15px] font-semibold hover:bg-orange-700 ${className ?? ''}`}
+      className={cn('inline-flex items-center justify-center gap-2 px-5 rounded-full bg-orange-600 text-white text-[15px] font-semibold hover:bg-orange-700', className)}
     >
       <PenLine className="w-4 h-4" /> {label}
     </a>
