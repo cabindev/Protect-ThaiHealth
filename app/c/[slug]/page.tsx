@@ -1,0 +1,199 @@
+// app/c/[slug]/page.tsx — หน้าแคมเปญลงชื่อ (สาธารณะ): บริบท + แถลงการณ์ + ตัวนับ + ฟอร์มเซ็นชื่อ + รายชื่อผู้สนับสนุน
+import { notFound } from 'next/navigation';
+import Link from 'next/link';
+import { ChevronDown, ChevronRight, ExternalLink, PenLine } from 'lucide-react';
+import type { Metadata } from 'next';
+import prisma from '@/app/lib/db';
+import { formatDeadline, isAccepting, localizeCampaign } from '@/app/lib/campaign';
+import Countdown from '@/app/components/Countdown';
+import { countryOptions } from '@/app/lib/countries';
+import { getDict, getLocale } from '@/app/i18n/server';
+import SignForm from './SignForm';
+import StickySignButton from './StickySignButton';
+import SupporterList, { PUBLIC_SUPPORTER_SELECT, publicSupporterWhere } from './SupporterList';
+
+export const dynamic = 'force-dynamic';
+
+const LATEST_SUPPORTERS = 5; // ที่เหลือดูที่ /c/[slug]/supporters
+
+async function load(slug: string) {
+  return prisma.campaign.findUnique({ where: { slug } });
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const [c, locale] = await Promise.all([load((await params).slug), getLocale()]);
+  if (!c) return {};
+  const l = localizeCampaign(c, locale);
+  return { title: l.title, description: l.summary.slice(0, 200), openGraph: { title: l.title, description: l.summary.slice(0, 200) } };
+}
+
+export default async function CampaignPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const [campaign, t, locale] = await Promise.all([load(slug), getDict(), getLocale()]);
+  if (!campaign) notFound();
+
+  const l = localizeCampaign(campaign, locale);
+  const accepting = isAccepting(campaign);
+  // eslint-disable-next-line react-hooks/purity -- Server Component render ครั้งเดียวต่อ request: เวลาอ้างอิงให้ Countdown (กัน hydration ไม่ตรง)
+  const serverNow = Date.now();
+  // นับถอยหลังเฉพาะตอนยังเปิดรับและมีวันปิด
+  const countdown =
+    accepting && campaign.closesAt ? (
+      <Countdown
+        closesAt={campaign.closesAt.toISOString()}
+        closesLabel={formatDeadline(campaign.closesAt, t.dateLocale)}
+        serverNow={serverNow}
+        locale={locale}
+      />
+    ) : null;
+  const [count, countries, orgs, supporters, publicCount] = await Promise.all([
+    prisma.signature.count({ where: { campaignId: campaign.id } }),
+    prisma.signature.groupBy({ by: ['country'], where: { campaignId: campaign.id } }),
+    prisma.signature.groupBy({ by: ['organization'], where: { campaignId: campaign.id, signingAs: 'ORGANIZATION' } }),
+    campaign.showSigners
+      ? prisma.signature.findMany({
+          where: publicSupporterWhere(campaign.id),
+          orderBy: { createdAt: 'desc' },
+          take: LATEST_SUPPORTERS,
+          select: PUBLIC_SUPPORTER_SELECT,
+        })
+      : Promise.resolve([]),
+    campaign.showSigners ? prisma.signature.count({ where: publicSupporterWhere(campaign.id) }) : Promise.resolve(0),
+  ]);
+
+  return (
+    <main className="min-h-screen bg-white pt-20 pb-16 px-4">
+      {/* ปก — หน้าจอแรกเต็มจอ แล้วค่อยเลื่อนอ่าน/ลงชื่อด้านล่าง */}
+      {l.hero && (
+        <section className="-mt-4 min-h-[calc(100svh-5rem)] flex flex-col items-center justify-center text-center max-w-4xl mx-auto py-8">
+          <h1 className="text-[2rem] leading-[1.15] sm:text-6xl font-extrabold tracking-tight text-gray-900 text-balance">
+            {l.hero.title}
+          </h1>
+          {l.hero.subtitle && (
+            <p className="mt-4 text-lg sm:text-3xl text-gray-800 text-balance">{l.hero.subtitle}</p>
+          )}
+          {l.hero.quote && (
+            <>
+              <span className="mt-8 sm:mt-10 block w-12 h-1 rounded-full bg-orange-600" aria-hidden="true" />
+              <p className="mt-6 sm:mt-8 text-xl sm:text-3xl font-semibold text-orange-700 leading-snug text-balance">
+                &ldquo;{l.hero.quote}&rdquo;
+              </p>
+            </>
+          )}
+          <div className="mt-10 sm:mt-12 w-full max-w-md">
+            <Counter count={count} orgs={orgs.length} countries={countries.length} centered />
+            {accepting && <SignCta label={t.campaign.signNow} className="mt-4 w-full h-12 text-base" />}
+            {countdown && <div className="mt-3">{countdown}</div>}
+            {!accepting && <p className="mt-4 text-sm font-medium text-gray-600">{t.campaign.closedSummary(count, orgs.length)}</p>}
+            <a href="#statement" className="mt-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
+              {t.campaign.readStatement} <ChevronDown className="w-4 h-4" />
+            </a>
+          </div>
+        </section>
+      )}
+
+      <div className="max-w-2xl mx-auto">
+        {l.hero ? (
+          <h2 id="statement" className="scroll-mt-20 pt-6 text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 leading-snug">
+            {l.title}
+          </h2>
+        ) : (
+          <h1 id="statement" className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 leading-snug">{l.title}</h1>
+        )}
+        <p className="mt-3 text-[15px] text-gray-600 leading-relaxed whitespace-pre-line">{l.summary}</p>
+
+        {/* ไม่มีปก → ตัวนับ + ปุ่มลงชื่ออยู่ใต้บริบท (มีปก = อยู่บนปกแล้ว) */}
+        {!l.hero && (
+          <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl bg-orange-50 border border-orange-100 px-5 py-4">
+            <Counter count={count} orgs={orgs.length} countries={countries.length} />
+            {accepting && <SignCta label={t.campaign.signNow} className="mt-3 w-full sm:w-auto sm:ml-auto sm:mt-0 h-11" />}
+            {countdown && <div className="w-full">{countdown}</div>}
+          </div>
+        )}
+
+        {/* แถลงการณ์ */}
+        <section className="mt-8">
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orange-600">{t.campaign.statement}</h2>
+          <div className="mt-3 text-[15px] text-gray-800 leading-7 whitespace-pre-line">{l.statement}</div>
+        </section>
+
+        {/* ฟอร์ม */}
+        <section id="sign" className="mt-10 scroll-mt-20 rounded-2xl border border-orange-100 p-5 sm:p-6">
+          {accepting ? (
+            <SignForm slug={campaign.slug} countries={countryOptions(t.dateLocale)} />
+          ) : (
+            <p className="text-center text-gray-600 font-medium py-6">{t.campaign.closedSummary(count, orgs.length)}</p>
+          )}
+        </section>
+
+        {accepting && <StickySignButton />}
+
+        {/* ช่องทางทางการ (คนไทยไปกรอกเองด้วยเลขบัตรของตัวเอง) */}
+        {campaign.officialUrl && (
+          <section className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-5">
+            <h2 className="text-sm font-semibold text-gray-800">{t.campaign.officialTitle}</h2>
+            <p className="mt-1 text-sm text-gray-500">{t.campaign.officialBody}</p>
+            {campaign.officialClosesAt && (
+              <p className="mt-1 text-sm font-medium text-gray-700">
+                {t.campaign.officialDeadline(formatDeadline(campaign.officialClosesAt, t.dateLocale))}
+              </p>
+            )}
+            <a
+              href={campaign.officialUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-orange-700 hover:text-orange-800"
+            >
+              {t.campaign.officialLink} <ExternalLink className="w-4 h-4" />
+            </a>
+          </section>
+        )}
+
+        {/* ผู้สนับสนุนล่าสุด 5 คน — ทั้งหมดอยู่หน้า /supporters (หลายร้อยคนจะทำให้หน้านี้ยาว/ช้า) */}
+        {supporters.length > 0 && (
+          <section className="mt-10">
+            <h2 className="text-sm font-semibold text-gray-800">{t.campaign.supporters}</h2>
+            <div className="mt-3">
+              <SupporterList rows={supporters} dateLocale={t.dateLocale} readMore={t.campaign.readMore} />
+            </div>
+            {publicCount > supporters.length && (
+              <Link
+                href={`/c/${campaign.slug}/supporters`}
+                className="mt-4 inline-flex items-center gap-1.5 h-10 px-4 rounded-full border border-gray-300 text-sm font-semibold text-gray-800 hover:border-gray-900"
+              >
+                {t.campaign.viewAllSupporters(publicCount)} <ChevronRight className="w-4 h-4" />
+              </Link>
+            )}
+          </section>
+        )}
+      </div>
+    </main>
+  );
+}
+
+// ตัวนับรายชื่อ — ใช้ทั้งบนปกและแบบไม่มีปก
+async function Counter({ count, orgs, countries, centered }: { count: number; orgs: number; countries: number; centered?: boolean }) {
+  const t = await getDict();
+  return (
+    <div className={centered ? 'rounded-2xl bg-orange-50 border border-orange-100 px-5 py-4' : 'contents'}>
+      <span className={`font-bold text-orange-700 ${centered ? 'block text-3xl' : 'text-2xl'}`}>{t.campaign.signers(count)}</span>
+      <span className={centered ? 'mt-1 flex flex-wrap justify-center gap-x-3 text-sm' : 'contents'}>
+        {orgs > 0 && <span className="text-sm font-semibold text-gray-700">{t.campaign.orgs(orgs)}</span>}
+        {countries > 0 && <span className="text-sm text-gray-500">{t.campaign.countries(countries)}</span>}
+      </span>
+    </div>
+  );
+}
+
+// ปุ่ม "ร่วมลงชื่อ" ไปที่ฟอร์ม — id ใช้กับ StickySignButton (ปุ่มลอยซ่อนเมื่อเห็นปุ่มนี้)
+function SignCta({ label, className }: { label: string; className?: string }) {
+  return (
+    <a
+      id="sign-cta"
+      href="#sign"
+      className={`inline-flex items-center justify-center gap-2 px-5 rounded-full bg-orange-600 text-white text-[15px] font-semibold hover:bg-orange-700 ${className ?? ''}`}
+    >
+      <PenLine className="w-4 h-4" /> {label}
+    </a>
+  );
+}

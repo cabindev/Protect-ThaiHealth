@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- favicon: ตัวอักษร PTH (Protect ThaiHealth) สีขาวบนพื้นส้ม — สีเดียวกับธีม (orange-600) -->
+  <rect width="64" height="64" rx="14" fill="#ea580c"/>
+  <text x="32" y="41.5" text-anchor="middle" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="25" font-weight="800" letter-spacing="-0.5" fill="#ffffff">PTH</text>
+</svg>

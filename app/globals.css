@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #1f2937;
+}
+
+html {
+  scroll-behavior: smooth; /* ปุ่ม "ร่วมลงชื่อ" เลื่อนลงไปฟอร์มแบบนุ่มนวล */
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  /* ฟอนต์สไตล์ Microsoft — Segoe UI/Leelawadee UI บน Windows, Tahoma (มีอักษรไทย) บนเครื่องอื่น */
+  font-family: "Segoe UI", "Leelawadee UI", Tahoma, "Noto Sans Thai", sans-serif;
+}
+
+/* หน้า auth — เนื้อหาค่อย ๆ ลอยขึ้นตอนเปิดหน้า */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-rise { animation: rise .28s cubic-bezier(.2,.7,.3,1) both; }
+
+/* autofill ของ Chrome ไม่ให้ทาพื้นเหลืองทับช่องแบบเส้นใต้ */
+input:-webkit-autofill {
+  -webkit-text-fill-color: #111827;
+  -webkit-box-shadow: 0 0 0 1000px #fff inset;
+}

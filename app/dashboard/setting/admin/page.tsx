@@ -1,0 +1,513 @@
+// app/dashboard/setting/admin/page.tsx
+'use client'
+import React, { useState, useEffect } from 'react';
+import {
+  Users,
+  ShieldCheck,
+  User,
+  Search,
+  Check,
+  X,
+  Calendar,
+  Mail,
+  ArrowLeft,
+  Clock
+} from 'lucide-react';
+import Link from 'next/link';
+import { toast } from 'react-hot-toast';
+import { useI18n } from '@/app/i18n/I18nProvider';
+
+interface UserItem {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  image?: string;
+  organization?: string | null;
+  position?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface AdminStats {
+  totalUsers: number;
+  totalAdmins: number;
+  totalMembers: number;
+  totalPending: number;
+  recentUsers: number;
+}
+
+// superadmin นับอยู่ในกลุ่มผู้ดูแลระบบ (แท็บ/สถิติ/สีแถว)
+const isAdminish = (role: string) => role === 'admin' || role === 'superadmin';
+
+const AdminManagementPage: React.FC = () => {
+  const [users, setUsers] = useState<UserItem[]>([]);
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterRole, setFilterRole] = useState<'all' | 'pending' | 'admin' | 'member'>('all');
+  const [updatingUsers, setUpdatingUsers] = useState<Set<number>>(new Set());
+  // ปฏิเสธบัญชีรออนุมัติ = ลบบัญชี — กดสองจังหวะ (ไม่ใช้ confirm() ของ browser)
+  const [confirmReject, setConfirmReject] = useState<number | null>(null);
+  const { t } = useI18n();
+  const a = t.admin;
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/admin/users');
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      const data = await response.json();
+      setUsers(data.users);
+      setStats(data.stats);
+      // มีบัญชีรออนุมัติ → เปิดแท็บนั้นให้ก่อน
+      if (data.stats?.totalPending > 0) setFilterRole('pending');
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setError(a.loadError);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // pending → member = อนุมัติบัญชี · member ↔ admin = สลับสิทธิ์แอดมิน
+  const toggleUserRole = async (userId: number, currentRole: string) => {
+    const newRole = currentRole === 'admin' || currentRole === 'pending' ? 'member' : 'admin';
+
+    setUpdatingUsers(prev => new Set(prev).add(userId));
+
+    try {
+      const response = await fetch('/api/admin/users/toggle-role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId, role: newRole }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update user role');
+      }
+
+      // Update local state
+      setUsers(prev =>
+        prev.map(user =>
+          user.id === userId
+            ? { ...user, role: newRole }
+            : user
+        )
+      );
+
+      // Update stats
+      if (stats) {
+        setStats(prev => {
+          if (!prev) return null;
+          if (currentRole === 'pending') return { ...prev, totalPending: prev.totalPending - 1, totalMembers: prev.totalMembers + 1 };
+          const adminChange = newRole === 'admin' ? 1 : -1;
+          return { ...prev, totalAdmins: prev.totalAdmins + adminChange, totalMembers: prev.totalMembers - adminChange };
+        });
+      }
+
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      toast.error(a.roleError);
+    } finally {
+      setUpdatingUsers(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(userId);
+        return newSet;
+      });
+    }
+  };
+
+  const rejectUser = async (userId: number) => {
+    setUpdatingUsers(prev => new Set(prev).add(userId));
+    try {
+      const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || a.rejectError);
+      setUsers(prev => prev.filter(u => u.id !== userId));
+      setStats(prev => prev ? { ...prev, totalUsers: prev.totalUsers - 1, totalPending: prev.totalPending - 1 } : null);
+      toast.success(a.rejected);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : a.rejectError);
+    } finally {
+      setConfirmReject(null);
+      setUpdatingUsers(prev => {
+        const next = new Set(prev);
+        next.delete(userId);
+        return next;
+      });
+    }
+  };
+
+  const filteredUsers = users
+    .filter(user => {
+      const matchesSearch =
+        user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesRole =
+        filterRole === 'all' || (filterRole === 'admin' ? isAdminish(user.role) : user.role === filterRole);
+
+      return matchesSearch && matchesRole;
+    })
+    // เรียง: รออนุมัติ → ผู้ดูแลระบบ → ผู้ใช้ทั่วไป แล้วตามด้วยผู้ใช้ใหม่สุด
+    .sort((a, b) => {
+      const rank = (r: string) => (r === 'pending' ? 0 : isAdminish(r) ? 1 : 2);
+      if (rank(a.role) !== rank(b.role)) return rank(a.role) - rank(b.role);
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString(t.dateLocale, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen">
+        <div className="container mx-auto px-6 py-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="animate-pulse space-y-6">
+              <div className="h-8 bg-orange-50 w-1/3 rounded"></div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="bg-orange-50 h-24 rounded-xl"></div>
+                ))}
+              </div>
+              <div className="bg-orange-50 h-96 rounded-xl"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-gray-900 text-lg mb-4 font-light">{error}</div>
+          <button
+            type="button"
+            onClick={fetchUsers}
+            className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors text-sm"
+          >
+            {t.common.retry}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen">
+      <div className="container mx-auto px-6 py-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex items-center gap-6 mb-4">
+              <Link
+                href="/dashboard"
+                className="flex items-center text-gray-500 hover:text-orange-600 transition-colors"
+              >
+                <ArrowLeft className="w-3 h-3 mr-2" />
+                <span className="text-sm font-light">{t.common.back}</span>
+              </Link>
+              <h1 className="text-2xl font-semibold text-gray-900 flex items-center gap-3">
+                <ShieldCheck className="w-6 h-6 text-orange-600" />
+                {a.title}
+              </h1>
+            </div>
+            <p className="text-gray-500 font-light text-sm">
+              {a.subtitle}
+            </p>
+          </div>
+
+          {/* Stats */}
+          {stats && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <div className="bg-white border border-orange-100 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-light text-gray-500 mb-1">{a.stats.total}</p>
+                    <p className="text-xl font-semibold text-gray-900">{stats.totalUsers}</p>
+                  </div>
+                  <span className="flex w-9 h-9 rounded-lg bg-orange-50 items-center justify-center">
+                    <Users className="w-5 h-5 text-orange-500" />
+                  </span>
+                </div>
+              </div>
+              <div className="bg-white border border-orange-100 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-light text-gray-500 mb-1">{a.stats.admins}</p>
+                    <p className="text-xl font-semibold text-gray-900">{stats.totalAdmins}</p>
+                  </div>
+                  <span className="flex w-9 h-9 rounded-lg bg-orange-50 items-center justify-center">
+                    <ShieldCheck className="w-5 h-5 text-orange-500" />
+                  </span>
+                </div>
+              </div>
+              <div className="bg-white border border-orange-100 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-light text-gray-500 mb-1">{a.stats.members}</p>
+                    <p className="text-xl font-semibold text-gray-900">{stats.totalMembers}</p>
+                  </div>
+                  <span className="flex w-9 h-9 rounded-lg bg-emerald-50 items-center justify-center">
+                    <User className="w-5 h-5 text-emerald-500" />
+                  </span>
+                </div>
+              </div>
+              <div className="bg-white border border-orange-100 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-light text-gray-500 mb-1">{a.stats.recent}</p>
+                    <p className="text-xl font-semibold text-gray-900">{stats.recentUsers}</p>
+                  </div>
+                  <span className="flex w-9 h-9 rounded-lg bg-sky-50 items-center justify-center">
+                    <Calendar className="w-5 h-5 text-sky-500" />
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Role Tabs */}
+          <div className="flex items-center gap-1 border-b border-orange-100 mb-6">
+            {([
+              { key: 'all', label: a.tabs.all, count: stats?.totalUsers ?? users.length },
+              { key: 'pending', label: a.tabs.pending, count: stats?.totalPending ?? users.filter(u => u.role === 'pending').length },
+              { key: 'admin', label: a.tabs.admin, count: stats?.totalAdmins ?? users.filter(u => isAdminish(u.role)).length },
+              { key: 'member', label: a.tabs.member, count: stats?.totalMembers ?? users.filter(u => u.role === 'member').length },
+            ] as const).map(tab => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setFilterRole(tab.key)}
+                className={`relative px-4 py-2.5 text-sm transition-colors -mb-px border-b-2 ${
+                  filterRole === tab.key
+                    ? 'border-orange-500 text-orange-700 font-medium'
+                    : 'border-transparent text-gray-400 hover:text-gray-700'
+                }`}
+              >
+                {tab.label}
+                <span className={`ml-1.5 text-xs ${filterRole === tab.key ? 'text-orange-400' : 'text-gray-300'}`}>
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Search */}
+          <div className="mb-6">
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3" />
+              <input
+                type="text"
+                placeholder={a.search}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-orange-100 rounded-lg bg-white text-gray-900 focus:border-orange-400 focus:outline-none transition-colors font-light text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Users Table */}
+          <div className="bg-white border border-orange-100 rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-orange-50/60 border-b border-orange-100">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-orange-700 uppercase tracking-wider">
+                      {a.cols.user}
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-orange-700 uppercase tracking-wider">
+                      {a.cols.email}
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-orange-700 uppercase tracking-wider">
+                      {a.cols.role}
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-orange-700 uppercase tracking-wider">
+                      {a.cols.joined}
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-orange-700 uppercase tracking-wider">
+                      {a.cols.actions}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-orange-50">
+                  {filteredUsers.map((user) => (
+                    <tr key={user.id} className={`transition-colors ${isAdminish(user.role) ? 'bg-orange-50/40 hover:bg-orange-50' : 'hover:bg-orange-50/40'}`}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-10 w-10">
+                            {user.image ? (
+                              <img
+                                className="h-10 w-10 rounded-full object-cover"
+                                src={user.image}
+                                alt={`${user.firstName} ${user.lastName}`}
+                              />
+                            ) : (
+                              <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
+                                <span className="text-sm font-medium text-orange-700">
+                                  {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {user.firstName} {user.lastName}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {[user.position, user.organization].filter(Boolean).join(' · ') || `ID: ${user.id}`}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center text-sm text-gray-900">
+                          <Mail className="w-3 h-3 mr-2 text-gray-400" />
+                          {user.email}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          user.role === 'pending'
+                            ? 'bg-white text-orange-700 border border-dashed border-orange-400'
+                            : isAdminish(user.role)
+                            ? 'bg-orange-100 text-orange-800'
+                            : 'bg-orange-50 text-orange-700'
+                        }`}>
+                          {user.role === 'pending' ? (
+                            <>
+                              <Clock className="w-3 h-3 mr-1" />
+                              {t.roles.pending}
+                            </>
+                          ) : isAdminish(user.role) ? (
+                            <>
+                              <ShieldCheck className="w-3 h-3 mr-1" />
+                              {t.roles[user.role]}
+                            </>
+                          ) : (
+                            <>
+                              <User className="w-3 h-3 mr-1" />
+                              {t.roles.member}
+                            </>
+                          )}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div className="flex items-center">
+                          <Calendar className="w-3 h-3 mr-2" />
+                          {formatDate(user.createdAt)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        {/* superadmin ไม่มีปุ่ม — เปลี่ยนได้ทาง scripts/make-superadmin.mjs เท่านั้น */}
+                        {user.role !== 'superadmin' && (
+                        <button
+                          type="button"
+                          onClick={() => toggleUserRole(user.id, user.role)}
+                          disabled={updatingUsers.has(user.id)}
+                          className={`inline-flex items-center px-3 py-1 border rounded-lg text-xs font-medium transition-colors ${
+                            user.role === 'pending'
+                              ? 'border-orange-600 text-white bg-orange-600 hover:bg-orange-700'
+                              : user.role === 'admin'
+                              ? 'border-red-200 text-red-600 bg-red-50 hover:bg-red-100'
+                              : 'border-orange-200 text-orange-700 bg-orange-50 hover:bg-orange-100'
+                          } ${
+                            updatingUsers.has(user.id)
+                              ? 'opacity-50 cursor-not-allowed'
+                              : ''
+                          }`}
+                        >
+                          {updatingUsers.has(user.id) ? (
+                            <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin mr-2"></div>
+                          ) : user.role === 'admin' ? (
+                            <X className="w-3 h-3 mr-1" />
+                          ) : (
+                            <Check className="w-3 h-3 mr-1" />
+                          )}
+                          {user.role === 'pending' ? a.approve : user.role === 'admin' ? a.revokeAdmin : a.makeAdmin}
+                        </button>
+                        )}
+                        {user.role === 'pending' && (
+                          confirmReject === user.id ? (
+                            <span className="ml-2 inline-flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => rejectUser(user.id)}
+                                disabled={updatingUsers.has(user.id)}
+                                className="px-3 py-1 rounded-lg border border-red-600 bg-red-600 text-white text-xs font-medium hover:bg-red-700 disabled:opacity-50"
+                              >
+                                {a.confirmReject}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setConfirmReject(null)}
+                                className="px-2 py-1 rounded-lg text-xs text-gray-500 hover:bg-gray-100"
+                              >
+                                {t.common.cancel}
+                              </button>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setConfirmReject(user.id)}
+                              className="ml-2 inline-flex items-center px-3 py-1 border border-red-200 rounded-lg text-xs font-medium text-red-600 bg-white hover:bg-red-50"
+                            >
+                              <X className="w-3 h-3 mr-1" /> {a.reject}
+                            </button>
+                          )
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* No Results */}
+            {filteredUsers.length === 0 && (
+              <div className="text-center py-12">
+                <Users className="w-12 h-12 text-orange-200 mx-auto mb-4" />
+                <h3 className="text-lg font-light text-gray-600 mb-2">{a.empty}</h3>
+                <p className="text-gray-400 font-light text-sm">{a.emptyHint}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Results Summary */}
+          {filteredUsers.length > 0 && (
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-500 font-light">
+                {a.showing(filteredUsers.length, users.length)}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AdminManagementPage;

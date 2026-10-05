@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// โครงสร้าง auth ยกมาจาก stopdrinknetwork — เพิ่ม relation ของโมดูลใหม่ที่นี่
+model User {
+  id                  Int       @id @default(autoincrement())
+  firstName           String
+  lastName            String
+  email               String    @unique
+  password            String? // null = สมัครผ่าน Google
+  image               String? // "/api/files/avatars/..." (เก็บใน uploads/ ไม่ใช่ public/)
+  role                Role      @default(pending)
+  phone               String?
+  organization        String? // หน่วยงานที่สังกัด
+  position            String? // ตำแหน่ง/บทบาท
+  emailVerified       DateTime?
+  resetToken          String?   @unique
+  resetTokenCreatedAt DateTime?
+  resetTokenExpiresAt DateTime?
+  lastPasswordReset   DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  auditLogs AuditLog[]
+}
+
+enum Role {
+  member // ผู้ใช้ที่อนุมัติแล้ว
+  admin
+  superadmin
+  pending // สมัครใหม่ รอแอดมินอนุมัติ — เห็นแค่ข้อมูลสาธารณะ
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+// บันทึกการเปลี่ยนแปลงข้อมูล (ใคร แก้อะไร เมื่อไหร่) — ใช้ร่วมทุกโมดูลผ่าน entityType
+model AuditLog {
+  id         Int         @id @default(autoincrement())
+  action     AuditAction
+  entityType String // ชื่อ model เช่น "User"
+  entityId   Int
+  entityName String // snapshot ชื่อ ณ ตอนนั้น — ยังอ่านได้แม้ record ถูกลบไปแล้ว
+  changes    String?     @db.Text // JSON: [{ field, label, from, to }] หรือข้อความอิสระ
+  userId     Int // ผู้กระทำ
+  user       User        @relation(fields: [userId], references: [id])
+  createdAt  DateTime    @default(now())
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ── แคมเปญลงชื่อ (petition) ───────────────────────────────────────────────
+// หน้าสาธารณะ /c/[slug] ไม่ต้อง login · เนื้อหามี 2 ภาษา (Th/En) ตามภาษาที่ผู้ชมเลือก
+model Campaign {
+  id               Int       @id @default(autoincrement())
+  slug             String    @unique @db.VarChar(80) // ใช้ใน URL /c/<slug>
+  titleTh          String    @db.VarChar(300)
+  titleEn          String    @db.VarChar(300)
+  summaryTh        String    @db.Text // บริบทสั้น ๆ ด้านบน
+  summaryEn        String    @db.Text
+  statementTh      String    @db.Text // ข้อความแถลงการณ์ที่ผู้ลงชื่อสนับสนุน
+  statementEn      String    @db.Text
+  // ปก (หน้าจอแรกของหน้าแคมเปญ) — ไม่บังคับ ว่าง = ไม่มีปก เริ่มที่ชื่อแคมเปญเลย
+  heroTitleTh      String?   @db.VarChar(300) // พาดหัวใหญ่ เช่น "Save Thailand's Earmarked Tax!"
+  heroTitleEn      String?   @db.VarChar(300)
+  heroSubtitleTh   String?   @db.VarChar(300) // บรรทัดรอง
+  heroSubtitleEn   String?   @db.VarChar(300)
+  heroQuoteTh      String?   @db.VarChar(500) // คำขวัญ
+  heroQuoteEn      String?   @db.VarChar(500)
+  officialUrl      String?   @db.VarChar(500) // ลิงก์ช่องทางทางการ (เช่น ระบบรับฟังความเห็นมาตรา 77) — ผู้ลงชื่อไปแสดงความเห็นเองด้วยเลขบัตรของตัวเอง
+  officialClosesAt DateTime? // วันปิดของช่องทางทางการ (เช่น รับฟังความเห็นมาตรา 77 ถึง 14 ต.ค.) — แสดงในกล่องลิงก์รัฐสภา
+  isOpen           Boolean   @default(true) // ปิด = แสดงหน้าได้แต่ลงชื่อไม่ได้
+  closesAt         DateTime? // ปิดรับอัตโนมัติหลังเวลานี้ (null = ไม่กำหนด)
+  showSigners      Boolean   @default(true) // แสดงรายชื่อผู้ที่ยินยอมให้เปิดเผยบนหน้าสาธารณะ
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  signatures Signature[]
+}
+
+// ผู้ลงชื่อ 1 คน ต่อ 1 แคมเปญ (อีเมลซ้ำในแคมเปญเดียวกันไม่ได้)
+// อีเมลและภาพลายเซ็นเห็นเฉพาะแอดมิน — หน้าสาธารณะแสดงแค่ชื่อ/องค์กร/ประเทศ ของคนที่ติ๊ก showPublic
+model Signature {
+  id            Int       @id @default(autoincrement())
+  campaignId    Int
+  campaign      Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  firstName     String    @db.VarChar(100)
+  lastName      String    @db.VarChar(100)
+  email         String    @db.VarChar(191) // เก็บตัวพิมพ์เล็ก
+  // ลงนามในนามองค์กร (นับเป็น "องค์กรที่ร่วมลงนาม" — ต้องมีชื่อองค์กร + ตำแหน่ง) หรือในนามส่วนตัว (organization = สังกัด ถ้ามี, ว่างได้)
+  signingAs     SigningAs @default(INDIVIDUAL)
+  position      String?   @db.VarChar(150) // ตำแหน่งในองค์กร (บังคับเมื่อ ORGANIZATION)
+  organization  String    @db.VarChar(200) // ว่าง ("") ได้เมื่อ INDIVIDUAL
+  country       String    @db.Char(2) // ISO 3166-1 alpha-2 (app/lib/countries.ts)
+  signaturePath String    @db.VarChar(300) // path ใต้ uploads/ เช่น "signatures/1/....png" (เปิดผ่าน /api/files — แอดมินเท่านั้น)
+  comment       String?   @db.MediumText // ความคิดเห็นเพิ่มเติม (ไม่บังคับ, สูงสุด 2,500 คำ — นับด้วย Intl.Segmenter รองรับภาษาไทย) เห็นเฉพาะแอดมิน
+  showPublic    Boolean   @default(false) // ยินยอมให้แสดงชื่อ/องค์กรบนหน้าสาธารณะ
+  locale        String    @default("th") @db.VarChar(5) // ภาษาที่ใช้ตอนลงชื่อ
+  ipHash        String?   @db.VarChar(64) // sha256(IP + NEXTAUTH_SECRET) — กันสแปม/ตรวจสอบย้อนหลัง โดยไม่เก็บ IP จริง
+  userAgent     String?   @db.VarChar(300)
+  createdAt     DateTime  @default(now())
+
+  @@unique([campaignId, email])
+  @@index([campaignId, createdAt])
+  @@index([campaignId, country])
+}
+
+enum SigningAs {
+  ORGANIZATION // ลงนามในนามองค์กร
+  INDIVIDUAL // ลงนามในนามส่วนตัว
+}
