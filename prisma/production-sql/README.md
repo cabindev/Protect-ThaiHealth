@@ -11,3 +11,6 @@
 | `2026-10-05_signature-signing-as.sql` | Signature.signingAs (ในนามองค์กร/ส่วนตัว) + position | ยัง |
 | `2026-10-05_campaign-hero.sql` | ปกแคมเปญ: heroTitle/Subtitle/Quote (Th/En) | ยัง |
 | `2026-10-05_campaign-official-closes.sql` | Campaign.officialClosesAt (วันปิดของระบบรัฐสภา แสดงในกล่องลิงก์) | ยัง |
+| `2026-10-05_seed-thaihealth-campaign.sql` | **ข้อมูล** แคมเปญ /c/thaihealth (ข้อความ/ปก/วันปิด) — รันหลังไฟล์ตารางทั้งหมด ครั้งเดียว | ยัง |
+
+ขั้นตอนขึ้นเซิร์ฟเวอร์ทั้งหมด: `docs/DEPLOY.md`
