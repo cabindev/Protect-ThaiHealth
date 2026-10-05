@@ -41,16 +41,16 @@ export default async function CampaignsPage() {
               <li key={c.id}>
                 <Link
                   href={`/dashboard/campaigns/${c.id}`}
-                  className="flex flex-wrap items-center gap-4 rounded-2xl border border-orange-100 bg-white p-5 hover:shadow-md hover:border-orange-300 transition-all"
+                  className="flex items-center gap-3 sm:gap-4 rounded-2xl border border-orange-100 bg-white p-4 sm:p-5 hover:shadow-md hover:border-orange-300 transition-all"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-gray-900 truncate">{localizeCampaign(c, locale).title}</p>
+                    <p className="font-semibold text-gray-900 line-clamp-2 sm:line-clamp-1 break-words">{localizeCampaign(c, locale).title}</p>
                     <p className="text-xs text-gray-400 mt-0.5">/c/{c.slug}</p>
                   </div>
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${open ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                  <span className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-medium ${open ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                     {open ? a.open : a.closed}
                   </span>
-                  <span className="text-right">
+                  <span className="shrink-0 text-right min-w-[3.5rem]">
                     <span className="block text-2xl font-bold text-gray-800 tabular-nums">{c._count.signatures.toLocaleString()}</span>
                     <span className="block text-xs text-gray-400">{a.signatures}</span>
                   </span>

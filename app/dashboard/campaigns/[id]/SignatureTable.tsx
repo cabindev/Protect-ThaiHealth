@@ -51,10 +51,27 @@ export default function SignatureTable({ rows }: { rows: SignatureRow[] }) {
   const fmt = (iso: string) =>
     new Date(iso).toLocaleString(t.dateLocale, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
+  // ปุ่มลบสองจังหวะ — ใช้ร่วมทั้งตาราง (จอใหญ่) และการ์ด (มือถือ)
+  const deleteControls = (id: number) =>
+    confirmId === id ? (
+      <span className="inline-flex gap-1">
+        <button type="button" onClick={() => remove(id)} disabled={busy === id} className="px-3 py-2 md:px-2.5 md:py-1 rounded-lg bg-red-600 text-white text-xs font-medium hover:bg-red-700 disabled:opacity-50">
+          {a.confirmRemove}
+        </button>
+        <button type="button" onClick={() => setConfirmId(null)} className="px-3 py-2 md:px-2 md:py-1 rounded-lg text-xs text-gray-500 hover:bg-gray-100">
+          {t.common.cancel}
+        </button>
+      </span>
+    ) : (
+      <button type="button" onClick={() => setConfirmId(id)} className="p-2.5 md:p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50" aria-label={a.remove}>
+        <Trash2 className="w-4 h-4" />
+      </button>
+    );
+
   return (
     <section className="bg-white rounded-2xl border border-orange-100 overflow-hidden">
       <div className="p-4 border-b border-orange-100">
-        <div className="relative max-w-sm">
+        <div className="relative sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
           <input
             value={q}
@@ -64,7 +81,52 @@ export default function SignatureTable({ rows }: { rows: SignatureRow[] }) {
           />
         </div>
       </div>
-      <div className="overflow-x-auto">
+      {/* มือถือ: การ์ดต่อ 1 คน (ตารางกว้างเกินจอ) */}
+      <ul className="md:hidden divide-y divide-orange-50">
+        {filtered.map((r) => (
+          <li key={r.id} className="p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[11px] text-gray-400 tabular-nums">
+                  #{rows.length - rows.indexOf(r)} · {fmt(r.createdAt)}
+                </p>
+                <p className="mt-0.5 font-semibold text-gray-900 break-words">
+                  {r.firstName} {r.lastName}
+                </p>
+                <p className="text-xs text-gray-500 break-all">{r.email}</p>
+              </div>
+              <div className="shrink-0 -mr-1 -mt-1">{deleteControls(r.id)}</div>
+            </div>
+            <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-700">
+              <span
+                className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                  r.signingAs === 'ORGANIZATION' ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                {r.signingAs === 'ORGANIZATION' ? t.campaign.asOrganization : t.campaign.asIndividual}
+              </span>
+              <span>{r.countryLabel}</span>
+            </div>
+            {(r.organization || r.position) && (
+              <p className="mt-1 text-sm text-gray-700">
+                {r.organization}
+                {r.position && <span className="text-xs text-gray-500"> · {r.position}</span>}
+              </p>
+            )}
+            {r.comment && (
+              <p className="mt-2 text-xs text-gray-700 leading-5 whitespace-pre-line rounded-lg bg-orange-50/60 p-3 max-h-48 overflow-y-auto">
+                <span className="font-semibold text-orange-800">{a.cols.comment}: </span>
+                {r.comment}
+              </p>
+            )}
+            {r.signaturePath && (
+              // eslint-disable-next-line @next/next/no-img-element -- ไฟล์ผ่าน /api/files (ต้อง login) next/image ใช้ไม่ได้
+              <img src={`/api/files/${r.signaturePath}`} alt="" className="mt-2 h-14 w-auto max-w-[200px] object-contain rounded border border-gray-100 bg-white" loading="lazy" />
+            )}
+          </li>
+        ))}
+      </ul>
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-orange-50/60 text-xs text-orange-700">
             <tr>
@@ -113,22 +175,7 @@ export default function SignatureTable({ rows }: { rows: SignatureRow[] }) {
                   )}
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{fmt(r.createdAt)}</td>
-                <td className="px-4 py-3 text-right whitespace-nowrap">
-                  {confirmId === r.id ? (
-                    <span className="inline-flex gap-1">
-                      <button type="button" onClick={() => remove(r.id)} disabled={busy === r.id} className="px-2.5 py-1 rounded-lg bg-red-600 text-white text-xs font-medium hover:bg-red-700 disabled:opacity-50">
-                        {a.confirmRemove}
-                      </button>
-                      <button type="button" onClick={() => setConfirmId(null)} className="px-2 py-1 rounded-lg text-xs text-gray-500 hover:bg-gray-100">
-                        {t.common.cancel}
-                      </button>
-                    </span>
-                  ) : (
-                    <button type="button" onClick={() => setConfirmId(r.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50" aria-label={a.remove}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </td>
+                <td className="px-4 py-3 text-right whitespace-nowrap">{deleteControls(r.id)}</td>
               </tr>
             ))}
           </tbody>
