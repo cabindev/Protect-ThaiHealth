@@ -73,7 +73,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ slug:
             src="/maps/thailand-halftone.svg"
             alt=""
             aria-hidden="true"
-            className="pointer-events-none select-none absolute inset-0 -z-10 h-full w-full object-cover object-[50%_42%] sm:object-contain"
+            className="pointer-events-none select-none absolute inset-0 -z-10 h-full w-full object-cover object-[47%_40%] scale-[1.7] sm:object-contain sm:scale-[1.4]"
           />
           <div className="max-w-2xl text-gray-950">
             <p className="font-mono text-[13px] tracking-wide text-gray-950/80">Protect ThaiHealth · {new Date().getFullYear()}</p>
