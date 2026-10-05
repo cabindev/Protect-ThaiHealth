@@ -35,12 +35,18 @@ export default async function PresentPage({
   const serverNow = Date.now();
 
   return (
-    <main className="min-h-screen bg-white pt-16 pb-8 px-6 flex items-center">
-      <div className="w-full max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 items-center">
+    // โทนเดียวกับปก: พื้นส้ม + แผนที่ halftone + คลื่นกรุงเทพฯ · ตัวอักษรเข้ม · QR อยู่บนการ์ดขาว (สแกนติดง่าย)
+    <main className="relative isolate overflow-hidden min-h-screen bg-orange-600 px-6 py-10 flex items-center text-gray-950">
+      <div className="hero-drift pointer-events-none select-none absolute -inset-[3%] -z-10" aria-hidden="true">
+        {/* eslint-disable-next-line @next/next/no-img-element -- SVG ตกแต่ง */}
+        <img src="/maps/thailand-halftone.svg" alt="" className="h-full w-full object-contain scale-[1.3] object-[30%_50%]" />
+      </div>
+      <div className="w-full max-w-6xl mx-auto grid lg:grid-cols-[1.1fr_0.9fr] gap-12 items-center">
         <div>
+          <p className="font-mono text-base tracking-wide text-gray-950/80">Protect ThaiHealth · {new Date().getFullYear()}</p>
           {/* มีปก = ใช้พาดหัวปก (สั้นและอ่านจากท้ายห้องได้) */}
-          <h1 className="text-3xl lg:text-5xl font-bold tracking-tight text-gray-900 leading-tight">{l.hero?.title ?? l.title}</h1>
-          {l.hero?.quote && <p className="mt-4 text-xl lg:text-2xl font-semibold text-orange-700">&ldquo;{l.hero.quote}&rdquo;</p>}
+          <h1 className="mt-4 text-4xl lg:text-6xl font-bold tracking-tight leading-[1.08] text-balance">{l.hero?.title ?? l.title}</h1>
+          {l.hero?.quote && <p className="mt-5 text-xl lg:text-2xl font-semibold text-balance">&ldquo;{l.hero.quote}&rdquo;</p>}
           <LiveCount slug={campaign.slug} initial={count} locale={locale} />
           {accepting && campaign.closesAt && (
             // นับถอยหลังตัวใหญ่ — กระตุ้นคนในห้องให้ลงชื่อตอนนั้นเลย
@@ -50,18 +56,21 @@ export default async function PresentPage({
               serverNow={serverNow}
               locale={locale}
               size="lg"
+              tone="onBrand"
               className="mt-6 justify-start"
             />
           )}
-          <p className="mt-8 text-lg text-gray-500 break-all">{url.replace(/^https?:\/\//, '')}</p>
         </div>
         <div className="text-center">
-          {/* svg จากไลบรารี qrcode (ไม่มีข้อมูลผู้ใช้ปน) */}
-          <div className="mx-auto w-full max-w-[460px] [&>svg]:w-full [&>svg]:h-auto" dangerouslySetInnerHTML={{ __html: svg }} />
-          <p className="mt-4 text-2xl font-semibold text-orange-700">{accepting ? t.campaign.presentScan : t.campaign.closed}</p>
+          {/* svg จากไลบรารี qrcode (ไม่มีข้อมูลผู้ใช้ปน) — การ์ดขาวขอบกว้าง ให้กล้องมือถือจับได้ง่ายจากระยะไกล */}
+          <div className="mx-auto w-full max-w-[440px] rounded-3xl bg-white p-6 shadow-2xl shadow-orange-950/25">
+            <div className="[&>svg]:w-full [&>svg]:h-auto" dangerouslySetInnerHTML={{ __html: svg }} />
+          </div>
+          <p className="mt-6 text-3xl font-bold">{accepting ? t.campaign.presentScan : t.campaign.closed}</p>
+          <p className="mt-2 font-mono text-lg text-gray-950/80 break-all">{url.replace(/^https?:\/\//, '')}</p>
           <a
             href={`/c/${campaign.slug}/qr.png`}
-            className="print:hidden mt-6 inline-flex items-center gap-2 h-10 px-4 rounded-full border border-gray-300 text-sm font-medium text-gray-700 hover:border-gray-900"
+            className="print:hidden mt-5 inline-flex items-center gap-2 h-10 px-4 rounded-full bg-white/90 text-sm font-medium text-gray-900 hover:bg-white"
           >
             <Download className="w-4 h-4" /> {t.campaign.downloadQr}
           </a>

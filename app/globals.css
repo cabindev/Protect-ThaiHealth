@@ -17,8 +17,8 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
-  /* ฟอนต์สไตล์ Microsoft — Segoe UI/Leelawadee UI บน Windows, Tahoma (มีอักษรไทย) บนเครื่องอื่น */
-  font-family: "Segoe UI", "Leelawadee UI", Tahoma, "Noto Sans Thai", sans-serif;
+  /* IBM Plex Sans Thai (ฝังจาก fontsource ใน app/layout.tsx) — สำรองเป็นฟอนต์ระบบถ้าโหลดไม่ทัน */
+  font-family: "IBM Plex Sans Thai", "Segoe UI", "Leelawadee UI", Tahoma, "Noto Sans Thai", sans-serif;
 }
 
 /* หน้า auth — เนื้อหาค่อย ๆ ลอยขึ้นตอนเปิดหน้า */
@@ -32,4 +32,39 @@ body {
 input:-webkit-autofill {
   -webkit-text-fill-color: #111827;
   -webkit-box-shadow: 0 0 0 1000px #fff inset;
+}
+
+/* ── ปกแคมเปญ (app/c/[slug]/page.tsx) ─────────────────────────────────── */
+/* ข้อความลอยขึ้นทีละบรรทัด — ตั้งดีเลย์ด้วย style={{ '--d': '120ms' }} */
+@keyframes hero-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+.hero-in { animation: hero-rise .7s cubic-bezier(.2,.7,.3,1) both; animation-delay: var(--d, 0ms); }
+
+/* แผนที่เลื่อนช้า ๆ (28 วิ ไป-กลับ) ให้ปกมีชีวิตแต่ไม่รบกวนการอ่าน */
+@keyframes hero-drift {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-1.6%, -1.2%, 0); }
+}
+.hero-drift { animation: hero-drift 28s ease-in-out infinite alternate; will-change: transform; }
+
+/* จอ QR: ตัวเลขเด้งเมื่อมีคนลงชื่อใหม่ + ป้าย "+1" ลอยขึ้นแล้วจาง */
+@keyframes count-bump {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+.count-bump { animation: count-bump .6s cubic-bezier(.2,.7,.3,1); }
+@keyframes plus-float {
+  0% { opacity: 0; transform: translateY(8px); }
+  15% { opacity: 1; transform: none; }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-18px); }
+}
+.plus-float { animation: plus-float 2.4s ease-out forwards; }
+
+/* คนที่ตั้งค่า "ลดการเคลื่อนไหว" ในเครื่อง — ปิดแอนิเมชันทั้งหมดของหน้านี้ */
+@media (prefers-reduced-motion: reduce) {
+  .hero-in, .hero-drift, .count-bump, .plus-float, .animate-ping { animation: none !important; }
 }

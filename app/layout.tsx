@@ -1,5 +1,12 @@
 // app/layout.tsx
 import type { Metadata } from "next";
+// ฟอนต์ฝังในโปรเจค (fontsource) — ไม่ดึงจาก Google ตอน build/รัน (เซิร์ฟเวอร์ Plesk อาจออกเน็ตไม่ได้ตอน build)
+// IBM Plex Sans Thai = ไทย+อังกฤษในฟอนต์เดียว · IBM Plex Mono = บรรทัดเล็ก/ตัวเลข (แบบภาพอ้างอิง)
+import "@fontsource/ibm-plex-sans-thai/400.css";
+import "@fontsource/ibm-plex-sans-thai/500.css";
+import "@fontsource/ibm-plex-sans-thai/600.css";
+import "@fontsource/ibm-plex-sans-thai/700.css";
+import "@fontsource/ibm-plex-mono/500.css";
 import "./globals.css";
 import SessionProvider from "./components/SessionProvider";
 import { Toaster } from "react-hot-toast";

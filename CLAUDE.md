@@ -9,7 +9,11 @@
 ## Design Theme (เหมือน stopdrinknetwork)
 - ส้ม–ขาว–ดำ สีพื้นล้วน **ห้าม gradient** · ปุ่มหลัก `bg-orange-600 text-white hover:bg-orange-700` · พื้น `bg-white`
 - Card `rounded-2xl border border-orange-100`, tint `bg-orange-50`
-- Font: system stack `"Segoe UI", "Leelawadee UI", Tahoma, "Noto Sans Thai"` (ไม่ใช้ next/font) · Icons: lucide-react
+- Font: **IBM Plex Sans Thai** (ไทย+อังกฤษ) + **IBM Plex Mono** (บรรทัดเล็ก/ตัวเลข) ฝังจาก `@fontsource/*` ใน `app/layout.tsx`
+  (ไม่ใช้ next/font/google — เซิร์ฟเวอร์ Plesk อาจออกเน็ตไม่ได้ตอน build) · Icons: lucide-react
+- ปกแคมเปญ: พื้นส้มล้วน + แผนที่ halftone (`scripts/build-halftone-map.mjs` → `public/maps/thailand-halftone.svg`, มีคลื่นกรุงเทพฯ ในไฟล์)
+  ตัวอักษรเข้มบนส้ม (ขาวบนส้มคอนทราสต์ไม่ผ่าน) · แอนิเมชัน `.hero-in` `.hero-drift` `.count-bump` `.plus-float` ใน globals.css ปิดเองเมื่อ prefers-reduced-motion
+  · ภาพแชร์ลิงก์ `app/c/[slug]/opengraph-image.tsx` (ฟอนต์ .woff จาก fontsource — ตัวสร้างภาพไม่รองรับ woff2)
 - **Navbar ลอย ไม่มีแถบพื้นหลัง** → หน้าเนื้อหาต้องเว้น `pt-20` เอง · Navbar ซ่อนตัวบน `/dashboard`
 
 ## Technology Stack

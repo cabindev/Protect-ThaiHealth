@@ -1,7 +1,7 @@
 // app/c/[slug]/page.tsx — หน้าแคมเปญลงชื่อ (สาธารณะ): บริบท + แถลงการณ์ + ตัวนับ + ฟอร์มเซ็นชื่อ + รายชื่อผู้สนับสนุน
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronDown, ChevronRight, ExternalLink, PenLine } from 'lucide-react';
+import { ArrowDown, ChevronDown, ChevronRight, ExternalLink, PenLine } from 'lucide-react';
 import type { Metadata } from 'next';
 import prisma from '@/app/lib/db';
 import { formatDeadline, isAccepting, localizeCampaign } from '@/app/lib/campaign';
@@ -10,6 +10,8 @@ import { countryOptions } from '@/app/lib/countries';
 import { getDict, getLocale } from '@/app/i18n/server';
 import { cn } from '@/lib/utils';
 import SignForm from './SignForm';
+import StatementBody from './StatementBody';
+import ReadingProgress from '@/app/components/ReadingProgress';
 import StickySignButton from './StickySignButton';
 import SupporterList, { PUBLIC_SUPPORTER_SELECT, publicSupporterWhere } from './SupporterList';
 
@@ -64,36 +66,48 @@ export default async function CampaignPage({ params }: { params: Promise<{ slug:
 
   return (
     <main className="min-h-screen bg-white">
+      <ReadingProgress />
       {/* ปก — เต็มจอ พื้นส้มล้วน + แผนที่จุด halftone ไทย/เพื่อนบ้าน (public/maps/thailand-halftone.svg)
           ตัวอักษรกลางจอ สีเข้มบนส้ม (คอนทราสต์ผ่าน — ขาวบนส้มอ่านยากกว่า) · ปุ่มดำแบบภาพอ้างอิง */}
       {l.hero && (
         <section className="relative isolate overflow-hidden bg-orange-600 min-h-[100svh] flex items-center justify-center px-5 pt-20 pb-12 text-center">
-          {/* eslint-disable-next-line @next/next/no-img-element -- SVG ตกแต่งไฟล์เดียว ไม่ต้องผ่าน next/image */}
-          <img
-            src="/maps/thailand-halftone.svg"
-            alt=""
-            aria-hidden="true"
-            className="pointer-events-none select-none absolute inset-0 -z-10 h-full w-full object-cover object-[47%_40%] scale-[1.7] sm:object-contain sm:scale-[1.4]"
-          />
+          {/* แผนที่ halftone + คลื่นจากกรุงเทพฯ (ในไฟล์ SVG) · กล่องนอกเลื่อนช้า ๆ (hero-drift) รูปในขยายตามจอ */}
+          <div className="hero-drift pointer-events-none select-none absolute -inset-[3%] -z-10" aria-hidden="true">
+            {/* eslint-disable-next-line @next/next/no-img-element -- SVG ตกแต่งไฟล์เดียว ไม่ต้องผ่าน next/image */}
+            <img
+              src="/maps/thailand-halftone.svg"
+              alt=""
+              className="h-full w-full object-cover object-[47%_40%] scale-[1.7] sm:object-contain sm:scale-[1.4]"
+            />
+          </div>
           <div className="max-w-2xl text-gray-950">
-            <p className="font-mono text-[13px] tracking-wide text-gray-950/80">Protect ThaiHealth · {new Date().getFullYear()}</p>
-            <h1 className="mt-4 text-[2rem] leading-[1.15] sm:text-[2.6rem] font-bold tracking-tight text-balance">{l.hero.title}</h1>
-            {l.hero.subtitle && <p className="mt-3 text-lg sm:text-xl text-gray-950/85 text-balance">{l.hero.subtitle}</p>}
+            <p className="hero-in font-mono text-[13px] tracking-wide text-gray-950/80">Protect ThaiHealth · {new Date().getFullYear()}</p>
+            <h1 style={{ '--d': '90ms' } as React.CSSProperties} className="hero-in mt-4 text-[2rem] leading-[1.15] sm:text-[2.6rem] font-bold tracking-tight text-balance">{l.hero.title}</h1>
+            {l.hero.subtitle && <p style={{ '--d': '180ms' } as React.CSSProperties} className="hero-in mt-3 text-lg sm:text-xl text-gray-950/85 text-balance">{l.hero.subtitle}</p>}
             {l.hero.quote && (
-              <p className="mt-5 text-base sm:text-lg font-semibold leading-snug text-balance">&ldquo;{l.hero.quote}&rdquo;</p>
+              <p style={{ '--d': '270ms' } as React.CSSProperties} className="hero-in mt-5 text-base sm:text-lg font-semibold leading-snug text-balance">
+                &ldquo;{l.hero.quote}&rdquo;
+              </p>
             )}
-            <p className="mt-6 text-sm sm:text-[15px] text-gray-950/80">
-              <span className="font-semibold text-gray-950">{t.campaign.signers(count)}</span>
+            <p style={{ '--d': '360ms' } as React.CSSProperties} className="hero-in mt-6 text-sm sm:text-[15px] text-gray-950/80">
+              {/* จุด live กระพริบ — บอกว่าตัวเลขเป็นของจริงที่กำลังเพิ่มขึ้น */}
+              <span className="relative mr-2 inline-flex h-2 w-2 align-middle" aria-hidden="true">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-gray-950 opacity-60 animate-ping" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-gray-950" />
+              </span>
+              <span className="font-mono font-medium text-gray-950">{t.campaign.signers(count)}</span>
               {orgs.length > 0 && <> · {t.campaign.organizationsCount(orgs.length)}</>}
               {countries.length > 0 && <> · {t.campaign.countries(countries.length)}</>}
             </p>
             {accepting ? (
-              <SignCta label={t.campaign.signNow} className="mt-5 h-11 rounded-lg bg-gray-950 hover:bg-black" />
+              <div style={{ '--d': '450ms' } as React.CSSProperties} className="hero-in">
+                <SignCta label={t.campaign.signNow} arrow className="mt-5 h-12 px-6 rounded-lg bg-gray-950 hover:bg-black shadow-lg shadow-orange-950/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-950" />
+              </div>
             ) : (
               <p className="mt-5 text-sm font-medium">{t.campaign.closedSummary(count, orgs.length)}</p>
             )}
             {accepting && campaign.closesAt && (
-              <div className="mt-4">
+              <div style={{ '--d': '540ms' } as React.CSSProperties} className="hero-in mt-4">
                 <Countdown
                   closesAt={campaign.closesAt.toISOString()}
                   closesLabel={formatDeadline(campaign.closesAt, t.dateLocale)}
@@ -103,8 +117,12 @@ export default async function CampaignPage({ params }: { params: Promise<{ slug:
                 />
               </div>
             )}
-            <a href="#statement" className="mt-5 inline-flex items-center gap-1 text-sm text-gray-950/75 hover:text-gray-950">
-              {t.campaign.readStatement} <ChevronDown className="w-4 h-4" />
+            <a
+              href="#statement"
+              style={{ '--d': '630ms' } as React.CSSProperties}
+              className="hero-in group mt-5 inline-flex items-center gap-1 text-sm text-gray-950/75 hover:text-gray-950"
+            >
+              {t.campaign.readStatement} <ChevronDown className="w-4 h-4 transition-transform group-hover:translate-y-0.5" />
             </a>
           </div>
         </section>
@@ -132,7 +150,9 @@ export default async function CampaignPage({ params }: { params: Promise<{ slug:
         {/* แถลงการณ์ */}
         <section className="mt-8">
           <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orange-600">{t.campaign.statement}</h2>
-          <div className="mt-3 text-[15px] text-gray-800 leading-7 whitespace-pre-line">{l.statement}</div>
+          <div className="mt-4">
+            <StatementBody text={l.statement} />
+          </div>
         </section>
 
         {/* ฟอร์ม */}
@@ -204,14 +224,19 @@ async function Counter({ count, orgs, countries, centered }: { count: number; or
 }
 
 // ปุ่ม "ร่วมลงชื่อ" ไปที่ฟอร์ม — id ใช้กับ StickySignButton (ปุ่มลอยซ่อนเมื่อเห็นปุ่มนี้)
-function SignCta({ label, className }: { label: string; className?: string }) {
+function SignCta({ label, className, arrow }: { label: string; className?: string; arrow?: boolean }) {
   return (
     <a
       id="sign-cta"
       href="#sign"
-      className={cn('inline-flex items-center justify-center gap-2 px-5 rounded-full bg-orange-600 text-white text-[15px] font-semibold hover:bg-orange-700', className)}
+      className={cn(
+        'group inline-flex items-center justify-center gap-2 px-5 rounded-full bg-orange-600 text-white text-[15px] font-semibold hover:bg-orange-700 transition-colors',
+        className
+      )}
     >
       <PenLine className="w-4 h-4" /> {label}
+      {/* ลูกศรขยับเมื่อชี้ — บอกว่าพาไปที่ฟอร์ม */}
+      {arrow && <ArrowDown className="w-4 h-4 transition-transform duration-200 group-hover:translate-y-0.5" />}
     </a>
   );
 }

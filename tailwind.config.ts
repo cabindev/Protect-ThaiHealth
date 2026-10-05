@@ -18,7 +18,8 @@ const config: Config = {
     },
     extend: {
       fontFamily: {
-        sans: ['"Segoe UI"', '"Leelawadee UI"', 'Tahoma', '"Noto Sans Thai"', 'sans-serif'],
+        sans: ['"IBM Plex Sans Thai"', '"Segoe UI"', '"Leelawadee UI"', 'Tahoma', '"Noto Sans Thai"', 'sans-serif'],
+        mono: ['"IBM Plex Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
       colors: {
         // สีหลัก — orange สีพื้นล้วน (ไม่ใช้ gradient) ยกมาจาก stopdrinknetwork
